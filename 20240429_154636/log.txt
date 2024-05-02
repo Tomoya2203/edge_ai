@@ -1,0 +1,24 @@
+2024-04-29 15:46:37,094 Training process is started.
+python "C:\jikken\neural_network_console\libs\Python\Lib\site-packages\nnabla\utils\cli\cli.py" train
+	-c "C:\jikken\Spresense-Tech-Seminar-Basic-master\Spresense_image_recognition_project\NNC_number_recognition\0429_1458.files\20240429_154636\net.nntxt"
+	-o "C:\jikken\Spresense-Tech-Seminar-Basic-master\Spresense_image_recognition_project\NNC_number_recognition\0429_1458.files\20240429_154636"
+2024-04-29 15:46:38,451 [nnabla]: [CALLBACK]: Exec train on local
+2024-04-29 15:46:38,498 [nnabla]: Using context "Context(backend=['cpu:float'], array_class='CpuCachedArray', device_id='')"
+2024-04-29 15:46:38,498 [nnabla]: Creating cache data for "C:\jikken\neural_network_console\many_number\train\train.csv"
+2024-04-29 15:46:39,081 [nnabla]: Creating cache data for "C:\jikken\neural_network_console\many_number\val\val.csv"
+2024-04-29 15:46:39,478 [nnabla]: Train with contexts ['cpu']
+2024-04-29 15:46:39,619 [nnabla]: Training epoch 1 of 10 begin
+2024-04-29 15:46:39,619 [nnabla]: ctx passed to scheduler doesn't have cuda/cudnn backend. lms scheduler will not be used.
+2024-04-29 15:46:39,619 [nnabla]: ctx passed to scheduler doesn't have cuda/cudnn backend. lms scheduler will not be used.
+2024-04-29 15:47:24,128 [nnabla]: epoch 1 of 10 cost=6.922072  {train_error=5.336252, valid_error=5.434261} time=(27.8s /278.0s) average load:{cpu:107.3%}
+2024-04-29 15:48:08,614 [nnabla]: epoch 2 of 10 cost=5.141112  {train_error=4.861447, valid_error=5.434702} time=(72.4s /362.1s) average load:{cpu:101.1%}
+2024-04-29 15:48:52,955 [nnabla]: epoch 3 of 10 cost=4.781720  {train_error=4.675058, valid_error=5.168648} time=(116.8s /389.2s) average load:{cpu:101.1%}
+2024-04-29 15:49:37,314 [nnabla]: epoch 4 of 10 cost=4.628417  {train_error=4.503997, valid_error=5.303574} time=(161.2s /402.9s) average load:{cpu:101.1%}
+2024-04-29 15:50:21,570 [nnabla]: epoch 5 of 10 cost=4.371538  {train_error=4.332341, valid_error=5.376429} time=(205.4s /410.8s) average load:{cpu:101.0%}
+2024-04-29 15:50:49,343 [nnabla]: epoch 6 of 10 cost=4.240324  time=(249.7s /416.2s) average load:{cpu:100.8%}
+2024-04-29 15:51:17,271 [nnabla]: epoch 7 of 10 cost=3.786055  time=(277.7s /396.6s) average load:{cpu:100.5%}
+2024-04-29 15:51:45,091 [nnabla]: epoch 8 of 10 cost=3.415493  time=(305.5s /381.8s) average load:{cpu:100.8%}
+2024-04-29 15:52:12,868 [nnabla]: epoch 9 of 10 cost=2.955273  time=(333.2s /370.3s) average load:{cpu:100.8%}
+2024-04-29 15:52:57,191 [nnabla]: epoch 10 of 10 cost=2.541681  {train_error=2.048026, valid_error=5.830624} time=(361.0s /361.0s) average load:{cpu:101.2%}
+2024-04-29 15:52:57,290 [nnabla]: Training Completed.
+NNabla command line interface (Version:1.39.0.dev1, Build:231224031435, Callback:NNabla SSH callback module.)

@@ -1,0 +1,13 @@
+2024-04-29 15:55:08,465 Evaluation process is started.
+python "C:\jikken\neural_network_console\libs\Python\Lib\site-packages\nnabla\utils\cli\cli.py" forward
+	-c "C:\jikken\Spresense-Tech-Seminar-Basic-master\Spresense_image_recognition_project\NNC_number_recognition\0429_1458.files\20240429_154636\results.nnp"
+	-d "C:\jikken\neural_network_console\many_number\val\val.csv"
+	-o "C:\jikken\Spresense-Tech-Seminar-Basic-master\Spresense_image_recognition_project\NNC_number_recognition\0429_1458.files\20240429_154636"
+	--replace_path
+2024-04-29 15:55:09,792 [nnabla]: [CALLBACK]: Exec forward on local
+2024-04-29 15:55:09,871 [nnabla]: Using context "Context(backend=['cpu:float'], array_class='CpuCachedArray', device_id='')"
+2024-04-29 15:55:11,973 [nnabla]: data 64 / 192
+2024-04-29 15:55:13,740 [nnabla]: data 128 / 192
+2024-04-29 15:55:15,466 [nnabla]: data 192 / 192
+2024-04-29 15:55:15,466 [nnabla]: Forward Completed.
+NNabla command line interface (Version:1.39.0.dev1, Build:231224031435, Callback:NNabla SSH callback module.)
