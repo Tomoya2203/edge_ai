@@ -180,8 +180,8 @@ def main():
     train_dataset = Datasets(train_img_dir, train_label_dir, transform=data_transform['train'])
     val_dataset = Datasets(val_img_dir, val_label_dir, transform=data_transform['val'])
 
-    train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=4, shuffle=True)
-    val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=4, shuffle=True)
+    train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=16, shuffle=True)
+    val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=16, shuffle=True)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = MultiLabelNet().to(device)
