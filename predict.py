@@ -113,10 +113,10 @@ def train(model, device, train_loader, optimizer, epoch, writer):
     recall = true_positive / (true_positive + false_negative)  # 真に正例のもののうち、正しく正例と予測されたものの割合
     f1 = 2 * precision * recall / (precision + recall)
     writer.add_scalar('Accuracy/train', accuracy, epoch + 1)
-    writer.add_scalar('Precision/train', precision, epoch+ 1)
-    writer.add_scalar('Recall/train', recall, epoch+ 1)
-    writer.add_scalar('F1/train', f1, epoch+ 1)
-    writer.add_scalar('Loss/train', loss, epoch+ 1)
+    writer.add_scalar('Precision/train', precision, epoch + 1)
+    writer.add_scalar('Recall/train', recall, epoch + 1)
+    writer.add_scalar('F1/train', f1, epoch + 1)
+    writer.add_scalar('Loss/train', loss, epoch + 1)
     return out  # Lossを返せるようになっている
 
 
