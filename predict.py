@@ -243,14 +243,19 @@ def main():
     data_transform = {
         'train': CustomTransformPipeline(
             [transforms.ToTensor(),
-            transforms.Resize((100, 300), antialias=True)],  # 他の前処理はまとめてリストに入れる
+             transforms.Resize((100, 300), antialias=True),
+             # transforms.RandomApply(
+             #     [transforms.ColorJitter(brightness=0.2, contrast=0.2),
+             #                #.RandomAffine(degrees=[0, 0], shear=(-10, 10), fill=random.randint(200, 255))
+             #                ],p=0.3),
+             # transforms.Grayscale()
+            ],  # 他の前処理はまとめてリストに入れる
             MoveObject(0.8),
         ),
         'val': transforms.Compose([
             transforms.ToTensor(),
             transforms.Resize((100, 300), antialias=True),
         ])}
-
     train_dataset = Datasets(train_img_dir, train_label_dir,
                              transform=data_transform['train'], move_transform=True)
     val_dataset = Datasets(val_img_dir, val_label_dir, transform=data_transform['val'], move_transform=False)
