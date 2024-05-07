@@ -4,12 +4,14 @@ from torchvision import transforms
 import torch.nn as nn
 from torch.utils.data import Dataset
 import glob
-from PIL import Image
+from PIL import Image, ImageDraw
 import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
+import random
 
 CLASS_NUM = 10
 EPOCH_NUMBER = 33
+
 
 # early_stoppongの実装
 # modelを変える
@@ -19,29 +21,102 @@ EPOCH_NUMBER = 33
 
 # trainもaccuracy求めたら面白いかも
 
+# yolo形式の割合から実際の長さへ変換する関数
+def yolo_to_pixel(x, y, width, height, original_width, original_height):
+    pixel_x = x * original_width
+    pixel_y = y * original_height
+    pixel_width = width * original_width
+    pixel_height = height * original_height
+    return int(pixel_x), int(pixel_y), int(pixel_width), int(pixel_height)
+
+
+# 実際の長さからbounding boxの左上と右上の座標を求める関数
+def pixel_to_diagonal(pixel_x, pixel_y, pixel_width, pixel_height):
+    return pixel_x - pixel_width // 2, pixel_y - pixel_height // 2, pixel_x + pixel_width // 2, pixel_y + pixel_height // 2
+
+
+class CustomTransformPipeline:
+    def __init__(self, transforms, move_transform):
+        self.transforms = transforms
+        self.move_transform = move_transform
+
+    def __call__(self, img, bbox):
+        for t in self.transforms:
+            img = t(img)
+        img = self.move_transform(img, bbox)
+        return img, bbox
+
+
+class MoveObject(object):
+    def __init__(self, probability=0.5):
+        self.probability = probability
+        pass
+
+    def __call__(self, img, bbox):  # クラスのインスタンスを関数のように呼び出す際に実行されます
+        if random.random() > self.probability:
+            return img
+        img = transforms.ToPILImage()(img)
+        new_img = Image.new('RGB', img.size)
+        # print(bbox)
+        objects = []
+        areas = []
+        dxs = []
+        dys = []
+        for i in range(len(bbox)):
+            object_area = yolo_to_pixel(*bbox[i], img.width, img.height)
+            # print(object_area)
+            object_area = pixel_to_diagonal(*object_area)
+            # print(object_area)
+            dx = random.randint(-1 * (object_area[0] % (img.width // 2)),
+                                img.width // 2 - object_area[2] % (img.width // 2))
+            dy = random.randint(-1 * (object_area[1] % (img.height // 2)),
+                                img.height // 2 - object_area[3] % (img.height // 2))
+            # バウンディングボックス内の物体を切り出す
+            # print(-1 * (object_area[1] % (img.height // 2)), img.height // 2 - object_area[3] % (img.height // 2))
+            object = img.crop(object_area)
+            draw = ImageDraw.Draw(img)
+            draw.rectangle(object_area, fill="WHITE")
+            objects.append(object)
+            areas.append(object_area)
+            dxs.append(dx)
+            dys.append(dy)
+        new_img.paste(img, (0, 0))
+        for object, object_area, dx, dy in zip(objects, areas, dxs, dys):
+            new_img.paste(object, (object_area[0] + dx, object_area[1] + dy))
+
+        new_img = transforms.ToTensor()(new_img)
+        return new_img
+
 
 class Datasets(Dataset):
-    def __init__(self, img_dir, label_dir, transform=None):
+    def __init__(self, img_dir, label_dir, transform=None, move_transform=False):  # ここにmove_transformを追加
         self.img_paths = sorted(glob.glob(img_dir))
         self.label_paths = sorted(glob.glob(label_dir))
         self.transform = transform
+        self.move_transform = move_transform
 
     def __getitem__(self, index):
         img = Image.open(self.img_paths[index])
         # original_img = img.copy()
-        if self.transform is not None:
-            img = self.transform(img)
-        else:
-            img = transforms.ToTensor()(img)
 
         include = torch.tensor([0.0] * CLASS_NUM)
+        coordinate = []
         with open(self.label_paths[index], 'r') as file:
             for line in file:
                 A, B, C, E, F = map(float, line.strip().split())
                 include[int(A)] = 1.0
+                coordinate.append([B, C, E, F])
+        coordinate = torch.tensor(coordinate)
+
+        if self.transform is not None and self.move_transform is True:
+            img, coordinate = self.transform(img, coordinate)
+        elif self.move_transform is False:
+            img = self.transform(img)
+        else:
+            img = transforms.ToTensor()(img)
 
         # img = transforms.ToPILImage()(img)
-        return img, include, self.img_paths[index]
+        return img, include, self.img_paths[index], coordinate
 
     def __len__(self):
         return len(self.img_paths)
@@ -65,7 +140,7 @@ class MultiLabelNet(nn.Module):
             nn.BatchNorm2d(24),
             nn.ReLU(),
             # nn.MaxPool2d(2)
-            )
+        )
         self.affine = nn.Linear(24 * 25 * 75, 10)
 
     def forward(self, x):
@@ -84,7 +159,7 @@ def train(model, device, train_loader, optimizer, epoch, writer):
     true_positive, false_negative = 0, 0
     false_positive, true_negative = 0, 0
     accuracy, precision, recall, f1 = 0, 0, 0, 0
-    for batch_idx, (x, y, z) in enumerate(train_loader):
+    for batch_idx, (x, y, z, w) in enumerate(train_loader):
         x = x.to(device)
         y = y.to(device)
         p_y_hat = model(x)
@@ -116,7 +191,7 @@ def train(model, device, train_loader, optimizer, epoch, writer):
     writer.add_scalar('Precision/train', precision, epoch + 1)
     writer.add_scalar('Recall/train', recall, epoch + 1)
     writer.add_scalar('F1/train', f1, epoch + 1)
-    writer.add_scalar('Loss/train', loss, epoch + 1)
+    writer.add_scalar('Loss/train', loss.item(), epoch + 1)
     return out  # Lossを返せるようになっている
 
 
@@ -126,7 +201,7 @@ def val(model, device, data_loader, epoch, writer, print_output=False):
     true_positive, false_negative = 0, 0
     false_positive, true_negative = 0, 0
     accuracy, precision, recall, f1 = 0, 0, 0, 0
-    for x, y, z in data_loader:
+    for x, y, z, w in data_loader:
         with torch.no_grad():
             x = x.to(device)
             y = y.to(device)
@@ -161,33 +236,33 @@ def val(model, device, data_loader, epoch, writer, print_output=False):
 
 def main():
     writer = SummaryWriter()
-    train_img_dir = "connect/train/images/*.jpg"
-    train_label_dir = "connect/train/labels/*.txt"
-    val_img_dir = "connect/val/images/*.jpg"
-    val_label_dir = "connect/val/labels/*.txt"
+    train_img_dir = "connect2/train/images/*.jpg"
+    train_label_dir = "connect2/train/labels/*.txt"
+    val_img_dir = "connect2/val/images/*.jpg"
+    val_label_dir = "connect2/val/labels/*.txt"
     data_transform = {
-        'train': transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Resize((100, 300), antialias=True),
-            # transforms.RandomRotation(5),
-            # transforms.Normalize((0.1307,), (0.3081,)),
-        ]),
+        'train': CustomTransformPipeline(
+            [transforms.ToTensor(),
+            transforms.Resize((100, 300), antialias=True)],  # 他の前処理はまとめてリストに入れる
+            MoveObject(0.8),
+        ),
         'val': transforms.Compose([
             transforms.ToTensor(),
             transforms.Resize((100, 300), antialias=True),
         ])}
 
-    train_dataset = Datasets(train_img_dir, train_label_dir, transform=data_transform['train'])
-    val_dataset = Datasets(val_img_dir, val_label_dir, transform=data_transform['val'])
+    train_dataset = Datasets(train_img_dir, train_label_dir,
+                             transform=data_transform['train'], move_transform=True)
+    val_dataset = Datasets(val_img_dir, val_label_dir, transform=data_transform['val'], move_transform=False)
 
     train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=16, shuffle=True)
-    val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=16, shuffle=True)
+    val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=16)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = MultiLabelNet().to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     # lr = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.9)
-    images, labels, _ = next(iter(train_dataloader))
+    images, labels, *_ = next(iter(train_dataloader))
     writer.add_graph(MultiLabelNet().to(device), images.to(device))
     for epoch in range(EPOCH_NUMBER):
         train(model, device, train_dataloader, optimizer, epoch, writer)
@@ -199,10 +274,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
 
 # a = torch.tensor([[1, 0, 1, 0], [1, 0, 1, 0]])
 # b = torch.tensor([[1, 1, 1, 0], [1, 0, 1, 0]])
