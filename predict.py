@@ -8,6 +8,7 @@ from PIL import Image, ImageDraw
 import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 import random
+from datetime import datetime
 
 CLASS_NUM = 10
 EPOCH_NUMBER = 33
@@ -175,7 +176,10 @@ def train(model, device, train_loader, optimizer, epoch, writer):
         false_positive += torch.sum((y == 0) & (y_pred_judge == 1)).item()
         true_negative += torch.sum((y == 0) & (y_pred_judge == 0)).item()
 
-        loss = F.binary_cross_entropy_with_logits(p_y_hat, y)
+        loss = F.binary_cross_entropy_with_logits(p_y_hat, y,
+                                                  pos_weight=torch.tensor([1, 0.39, 1.83, 13.1, 1.95, 0.61409396,
+                                                              3.33333333,  2.78740157,  6.07352941,  3.76237624], device=device)
+                                                  )
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -235,7 +239,8 @@ def val(model, device, data_loader, epoch, writer, print_output=False):
 
 
 def main():
-    writer = SummaryWriter()
+    subdir_name = datetime.now().strftime("%b%d_%H-%M-%S")
+    writer = SummaryWriter(f"./result/{subdir_name}/")
     train_img_dir = "connect2/train/images/*.jpg"
     train_label_dir = "connect2/train/labels/*.txt"
     val_img_dir = "connect2/val/images/*.jpg"
@@ -247,9 +252,9 @@ def main():
              # transforms.RandomApply(
              #     [transforms.ColorJitter(brightness=0.2, contrast=0.2),
              #                #.RandomAffine(degrees=[0, 0], shear=(-10, 10), fill=random.randint(200, 255))
-             #                ],p=0.3),
+             #                ],p=0.8),
              # transforms.Grayscale()
-            ],  # 他の前処理はまとめてリストに入れる
+             ],  # 他の前処理はまとめてリストに入れる
             MoveObject(0.8),
         ),
         'val': transforms.Compose([
@@ -271,10 +276,8 @@ def main():
     writer.add_graph(MultiLabelNet().to(device), images.to(device))
     for epoch in range(EPOCH_NUMBER):
         train(model, device, train_dataloader, optimizer, epoch, writer)
-        if epoch % 4 == 0:
-            val(model, device, val_dataloader, epoch, writer)
+        val(model, device, val_dataloader, epoch, writer)
         # lr.step()
-    val(model, device, val_dataloader, EPOCH_NUMBER, writer, print_output=False)
 
 
 if __name__ == "__main__":
