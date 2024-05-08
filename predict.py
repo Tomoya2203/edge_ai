@@ -11,7 +11,7 @@ import random
 from datetime import datetime
 
 CLASS_NUM = 10
-EPOCH_NUMBER = 33
+EPOCH_NUMBER = 100
 
 
 # early_stoppongの実装
@@ -57,7 +57,7 @@ class MoveObject(object):
         if random.random() > self.probability:
             return img
         img = transforms.ToPILImage()(img)
-        new_img = Image.new('RGB', img.size)
+        new_img = Image.new('L', img.size)
         # print(bbox)
         objects = []
         areas = []
@@ -127,27 +127,27 @@ class MultiLabelNet(nn.Module):
     def __init__(self):
         super().__init__()
         self.layer1 = nn.Sequential(
-            nn.Conv2d(3, 8, kernel_size=3, padding=1, stride=1),
-            nn.BatchNorm2d(8),
+            nn.Conv2d(1, 4, kernel_size=3, padding=1, stride=1),  # 入力チャネル数を1に変更
+            nn.BatchNorm2d(4),
             nn.ReLU(),
             nn.MaxPool2d(2))
         self.layer2 = nn.Sequential(
-            nn.Conv2d(8, 16, kernel_size=3, padding=1, stride=1),
-            nn.BatchNorm2d(16),
+            nn.Conv2d(4, 8, kernel_size=3, padding=1, stride=1),
+            nn.BatchNorm2d(8),
             nn.ReLU(),
             nn.MaxPool2d(2))
-        self.layer3 = nn.Sequential(
-            nn.Conv2d(16, 24, kernel_size=3, padding=1, stride=1),
-            nn.BatchNorm2d(24),
-            nn.ReLU(),
-            # nn.MaxPool2d(2)
-        )
-        self.affine = nn.Linear(24 * 25 * 75, 10)
+        # self.layer3 = nn.Sequential(
+        #     nn.Conv2d(12, 16, kernel_size=3, padding=1, stride=1),
+        #     nn.BatchNorm2d(16),
+        #     nn.ReLU(),
+        #     # nn.MaxPool2d(2)
+        # )
+        self.affine = nn.Linear(8 * 6 * 18, 10)
 
     def forward(self, x):
         x = self.layer1(x)
         x = self.layer2(x)
-        x = self.layer3(x)
+        # x = self.layer3(x)
         x = torch.flatten(x, 1)
         x = self.affine(x)
         return x
@@ -177,8 +177,8 @@ def train(model, device, train_loader, optimizer, epoch, writer):
         true_negative += torch.sum((y == 0) & (y_pred_judge == 0)).item()
 
         loss = F.binary_cross_entropy_with_logits(p_y_hat, y,
-                                                  pos_weight=torch.tensor([1, 0.39, 1.83, 13.1, 1.95, 0.61409396,
-                                                              3.33333333,  2.78740157,  6.07352941,  3.76237624], device=device)
+                                                  # pos_weight=torch.tensor([1, 0.39, 1.83, 13.1, 1.95, 0.61409396,
+                                                  #             3.33333333,  2.78740157,  6.07352941,  3.76237624], device=device)
                                                   )
         optimizer.zero_grad()
         loss.backward()
@@ -247,19 +247,15 @@ def main():
     val_label_dir = "connect2/val/labels/*.txt"
     data_transform = {
         'train': CustomTransformPipeline(
-            [transforms.ToTensor(),
-             transforms.Resize((100, 300), antialias=True),
-             # transforms.RandomApply(
-             #     [transforms.ColorJitter(brightness=0.2, contrast=0.2),
-             #                #.RandomAffine(degrees=[0, 0], shear=(-10, 10), fill=random.randint(200, 255))
-             #                ],p=0.8),
-             # transforms.Grayscale()
-             ],  # 他の前処理はまとめてリストに入れる
+            [transforms.Grayscale(),
+             transforms.Resize((25, 75), antialias=True),
+             transforms.ToTensor()],
             MoveObject(0.8),
         ),
         'val': transforms.Compose([
+            transforms.Grayscale(),
+            transforms.Resize((25, 75), antialias=True),
             transforms.ToTensor(),
-            transforms.Resize((100, 300), antialias=True),
         ])}
     train_dataset = Datasets(train_img_dir, train_label_dir,
                              transform=data_transform['train'], move_transform=True)
